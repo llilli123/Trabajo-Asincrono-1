@@ -403,7 +403,7 @@
             tlp_Lineas.ColumnStyles.Add(new ColumnStyle());
             tlp_Lineas.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             tlp_Lineas.ColumnStyles.Add(new ColumnStyle());
-            tlp_Lineas.Location = new Point(50, 151);
+            tlp_Lineas.Location = new Point(79, 148);
             tlp_Lineas.Name = "tlp_Lineas";
             tlp_Lineas.RowCount = 1;
             tlp_Lineas.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
