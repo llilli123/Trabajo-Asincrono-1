@@ -13,7 +13,7 @@ namespace Trabajo_Asincrono_1
         public int TotalDeItems { get; }
         public int Producido { get; private set; }
 
-        private readonly Random _rnd = new();
+        private Random _rnd = new();
 
         public Produccion(string nombre, int totalDeItems)
         {
