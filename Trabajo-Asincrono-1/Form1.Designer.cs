@@ -120,7 +120,7 @@
             // lbl_Lineas
             // 
             lbl_Lineas.AutoSize = true;
-            lbl_Lineas.Location = new Point(62, 154);
+            lbl_Lineas.Location = new Point(34, 154);
             lbl_Lineas.Name = "lbl_Lineas";
             lbl_Lineas.Size = new Size(50, 20);
             lbl_Lineas.TabIndex = 18;

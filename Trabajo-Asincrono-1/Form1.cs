@@ -2,24 +2,30 @@ namespace Trabajo_Asincrono_1
 {
     public partial class Form1 : Form
     {
+        // Lista de todas las líneas activas en la simulación
         private List<Produccion> _lineas = new();
+        // Diccionarios para asociar cada línea con sus controles de UI, los diccionarios san claves para que los cambios vayan a la linea, pb o estado que debe de ir
         private Dictionary<Produccion, ProgressBar> _pbLinea = new();
         private Dictionary<Produccion, Label> _lblProdLinea = new();
         private Dictionary<Produccion, Label> _lblEstadoLinea = new();
+        // Fuente de cancelación para detener la producción cuando sea necesario
         private CancellationTokenSource cts;
-        private Random _rnd = new();
+        //Objeto de tipo random, para randomizar diferentes cosas
+        private Random rnd = new();
+        // Límites del número de líneas que pueden mostrarse
         private int MIN_LINEAS = 2;
         private int MAX_LINEAS = 5;
         public Form1()
         {
             InitializeComponent();
-
-            txt_NumeroLineas.Text = MIN_LINEAS.ToString();              // Alpha y Beta al arrancar
-            btn_MenosLineas.Enabled = false;           // ya estamos en el mínimo
+            // Al arrancar se crean las líneas Alpha y Beta
+            txt_NumeroLineas.Text = MIN_LINEAS.ToString();              
+            btn_MenosLineas.Enabled = false;           
             btn_CancelarProduccion.Enabled = false;
             ConstruirFilas(MIN_LINEAS);
         }
-        /// Devuelve el número actual de líneas (valida rango; si falla, retorna MIN_LINEAS)
+        /// Devuelve el número de líneas indicado por el usuario validando
+        /// que se encuentre dentro del rango permitido
         private int ObtenerNumeroLineas()
         {
             if (!int.TryParse(txt_NumeroLineas.Text, out int valor))
@@ -76,7 +82,7 @@ namespace Trabajo_Asincrono_1
             for (int i = 0; i < cantidad; i++)
             {
                 // 80-150 productos aleatorios para la demo
-                var linea = new Produccion(nombres[i], _rnd.Next(80, 151));
+                var linea = new Produccion(nombres[i], rnd.Next(80, 151));
                 _lineas.Add(linea);
 
                 // ?? Columna 0: nombre ??
@@ -145,6 +151,7 @@ namespace Trabajo_Asincrono_1
             int fabricadosGlo = 0;
 
             cts = new CancellationTokenSource();
+            CancellationToken ct = cts.Token;
 
             var tareas = _lineas.Select(linea =>
             {
@@ -171,7 +178,7 @@ namespace Trabajo_Asincrono_1
                     lsb_Eventos.TopIndex = lsb_Eventos.Items.Count - 1; // autoscroll
                 };
 
-                return linea.RunAsync(prog, log, cts.Token)
+                return linea.RunAsync(prog, log, ct)
                 .ContinueWith(t =>
                  {
                      if (t.IsCanceled)
@@ -181,14 +188,23 @@ namespace Trabajo_Asincrono_1
                  }, TaskScheduler.FromCurrentSynchronizationContext());
             });
 
+
             try
             {
                 await Task.WhenAll(tareas);
-                lsb_Eventos.Items.Add(" Todas las líneas terminaron.");
+                if (cts.IsCancellationRequested) 
+                { 
+                    lsb_Eventos.Items.Add("Producción cancelada por el usuario."); 
+                }
+                else
+                {
+                    lsb_Eventos.Items.Add(" Todas las líneas terminaron.");
+                }
+                
             }
             catch (OperationCanceledException)
             {
-                lsb_Eventos.Items.Add("Producción cancelada por el usuario.");
+                //Dejado Sin Efecto
             }
             finally
             {
