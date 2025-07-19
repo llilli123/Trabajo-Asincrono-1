@@ -31,6 +31,7 @@ namespace Trabajo_Asincrono_1
             if (!int.TryParse(txt_NumeroLineas.Text, out int valor))
                 valor = MIN_LINEAS;
 
+            // Ajustamos para que nunca baje de MIN_LINEAS ni pase de MAX_LINEAS usando Math.Clamp
             return Math.Clamp(valor, MIN_LINEAS, MAX_LINEAS);
         }
 
@@ -40,6 +41,7 @@ namespace Trabajo_Asincrono_1
             valor = Math.Clamp(valor, MIN_LINEAS, MAX_LINEAS);
             txt_NumeroLineas.Text = valor.ToString();
 
+            // Si llegamos al máximo, el botón “+” se apaga; si llegamos al mínimo, el “–” se apaga.
             btn_MasLineas.Enabled = valor < MAX_LINEAS;
             btn_MenosLineas.Enabled = valor > MIN_LINEAS;
         }
@@ -50,14 +52,14 @@ namespace Trabajo_Asincrono_1
             {
                 n++;
                 EstablecerNumeroLineas(n);
-                ConstruirFilas(n);
+                ConstruirFilas(n); // Preparamos la mesa con la nueva cantidad de filas
             }
         }
 
         private void btn_MenosLineas_Click(object sender, EventArgs e)
         {
             int n = ObtenerNumeroLineas();
-            if (n > MIN_LINEAS)
+            if (n > MIN_LINEAS) // No bajamos de dos líneas.
             {
                 n--;
                 EstablecerNumeroLineas(n);
@@ -73,19 +75,19 @@ namespace Trabajo_Asincrono_1
             _lineas.Clear();
             _pbLinea.Clear();
             _lblProdLinea.Clear();
-
+            //array que guarda las etiquetas de cada linea
             string[] nombres = {
         "Línea Alpha", "Línea Beta", "Línea Gamma",
         "Línea Delta", "Línea Epsilon"
     };
-
+            // Creamos tantas líneas como pidió la persona
             for (int i = 0; i < cantidad; i++)
             {
                 // 80-150 productos aleatorios para la demo
                 var linea = new Produccion(nombres[i], rnd.Next(80, 151));
                 _lineas.Add(linea);
 
-                // ?? Columna 0: nombre ??
+                // Columna 0: nombre 
                 var lblNombre = new Label
                 {
                     Text = linea.Nombre,
@@ -93,7 +95,7 @@ namespace Trabajo_Asincrono_1
                     AutoSize = true
                 };
 
-                // ?? Columna 1: barra ??
+                //  Columna 1: barra 
                 var pb = new ProgressBar
                 {
                     Maximum = 100,
@@ -101,14 +103,14 @@ namespace Trabajo_Asincrono_1
                     Style = ProgressBarStyle.Continuous
                 };
 
-                // ?? Columna 2: contador ??
+                // Columna 2: contador 
                 var lblProd = new Label
                 {
                     Text = $"0 / {linea.TotalDeItems}",
                     Anchor = AnchorStyles.Left,
                     AutoSize = true
                 };
-
+                // Columna 3 Estado
                 var lblEstado = new Label
                 {
                     Text = "Pendiente",              // antes de iniciar
@@ -130,9 +132,9 @@ namespace Trabajo_Asincrono_1
                 _lblEstadoLinea[linea] = lblEstado;
             }
 
-            tlp_Lineas.ResumeLayout();
+            tlp_Lineas.ResumeLayout(); // Se resume el layout despues de haber creado las lineas
 
-            // Actualiza el total global de productos
+            // Calculamos el total global y lo mostramos.
             int total = _lineas.Sum(l => l.TotalDeItems);
             lbl_Total.Text = $"0 / {total} productos";
             pgb_TotalProgreso.Value = 0;
@@ -140,25 +142,28 @@ namespace Trabajo_Asincrono_1
 
         private async void btn_IniciarProduccion_Click(object sender, EventArgs e)
         {
+            // Bloqueamos controles para que nadie cambie los números a mitad de camino
             btn_IniciarProduccion.Enabled = false;
             btn_CancelarProduccion.Enabled = true;
             btn_MasLineas.Enabled = btn_MenosLineas.Enabled = false;
-            txt_NumeroLineas.Enabled = false;             // evita que cambien el número a mitad
-            lsb_Eventos.Items.Clear();
+            txt_NumeroLineas.Enabled = false;             
+            lsb_Eventos.Items.Clear(); // Limpiamos el registro de mensajes.
 
-
+            // Total que deben fabricar todas las líneas juntas.
             int totalGlobal = _lineas.Sum(l => l.TotalDeItems);
             int fabricadosGlo = 0;
-
+            //Token para cancelacion de produccion
             cts = new CancellationTokenSource();
             CancellationToken ct = cts.Token;
 
+            // Preparamos una tarea por línea.
             var tareas = _lineas.Select(linea =>
             {
                 var pb = _pbLinea[linea];
                 var lblP = _lblProdLinea[linea];
                 var lblEstado = _lblEstadoLinea[linea];
 
+                // Este “reporte” se dispara cada vez que la línea fabrica una pieza
                 var prog = new Progress<int>(produced =>
                 {
                     pb.Value = produced * 100 / linea.TotalDeItems;
@@ -172,12 +177,13 @@ namespace Trabajo_Asincrono_1
 
                 });
 
+                // Donde escribimos los avisos (25 %, 50 %, 75 %, etc.), aca se overlodea el delegado usado en <Produccion>
                 Action<string> log = msg =>
                 {
                     lsb_Eventos.Items.Add($"• {msg}");
                     lsb_Eventos.TopIndex = lsb_Eventos.Items.Count - 1; // autoscroll
                 };
-
+                // Lanzamos la producción y al final cambiamos el texto de estado.
                 return linea.RunAsync(prog, log, ct)
                 .ContinueWith(t =>
                  {
@@ -188,7 +194,7 @@ namespace Trabajo_Asincrono_1
                  }, TaskScheduler.FromCurrentSynchronizationContext());
             });
 
-
+            // Esperamos a que todas las líneas terminen (o se cancelen).
             try
             {
                 await Task.WhenAll(tareas);
@@ -206,9 +212,10 @@ namespace Trabajo_Asincrono_1
             {
                 //Dejado Sin Efecto
             }
+            // Restauramos los botones para la próxima ronda.
             finally
             {
-                // Restaurar controles
+                
                 btn_IniciarProduccion.Enabled = true;
                 btn_CancelarProduccion.Enabled = false;
                 txt_NumeroLineas.Enabled = true;
@@ -225,8 +232,8 @@ namespace Trabajo_Asincrono_1
 
         private void btn_CancelarProduccion_Click(object sender, EventArgs e)
         {
-            cts.Cancel();
-            btn_CancelarProduccion.Enabled = false;
+            cts.Cancel(); // Cancelacion de la produccion
+            btn_CancelarProduccion.Enabled = false; // Evita pulsarlo varias veces.
         }
     }
 }
